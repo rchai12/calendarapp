@@ -80,6 +80,7 @@ class TaskManagerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
       home: TaskScreen(),
     );
@@ -154,8 +155,6 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
           date: DateTime(_date.year, _date.month, _date.day),
           status: _selectedTaskStatus
         );
-        print('Adding task to list');
-        print(_date);
         if (!_tasksByDate.containsKey(_date)) {
           _tasksByDate[_date] = [];
         }
@@ -198,11 +197,11 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
               children: [
                 TextField(
                   controller: _titleController,
-                  decoration: InputDecoration(labelText: 'Task Title'),
+                  decoration: InputDecoration(labelText: 'Plan Title'),
                 ),
                 TextField(
                   controller: _descriptionController,
-                  decoration: InputDecoration(labelText: 'Task Description'),
+                  decoration: InputDecoration(labelText: 'Plan Description'),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -311,11 +310,11 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
               children: [
                 TextField(
                   controller: _titleController,
-                  decoration: InputDecoration(labelText: 'Task Title'),
+                  decoration: InputDecoration(labelText: 'Plan Title'),
                 ),
                 TextField(
                   controller: _descriptionController,
-                  decoration: InputDecoration(labelText: 'Task Description'),
+                  decoration: InputDecoration(labelText: 'Plan Description'),
                 ),
                  Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0), 
@@ -363,7 +362,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                   onPressed: () => _selectDate(context),
                   child: Text('Select Date: ${DateFormat('MM-dd-yyyy').format(_date)}'), 
                 ),
-                ElevatedButton(onPressed: _addTask, child: Text('Add Task')),
+                ElevatedButton(onPressed: _addTask, child: Text('Add Plan')),
               ],
             ),
           ),
@@ -400,7 +399,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Task Manager'),
+        title: Text('Plan Manager'),
         actions: [
           IconButton(
             icon: Icon(Icons.today),
@@ -590,7 +589,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
-      floatingActionButton: _tabController.index == 1 || _tabController.index == 0 ? FloatingActionButton(
+      floatingActionButton: _tabController.index == 1 || _tabController.index == 0 || _tabController.index == 2 ? FloatingActionButton(
         onPressed: _showAddTaskMenu,
         child: Icon(Icons.add),
       )
