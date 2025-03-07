@@ -107,7 +107,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
       _tasks.sort((task1, task2) => task2.priority.index.compareTo(task1.priority.index));
     });
   }
-  
+
   void _editTask(int index) {
     _titleController.text = _tasks[index].title;
     _descriptionController.text = _tasks[index].description;
@@ -161,6 +161,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                       _tasks[index].setTitle(_titleController.text);
                       _tasks[index].setDescription(_descriptionController.text);
                       _tasks[index].setPriority(_selectedPriority);
+                      _sortTasksByPriority();
                     });
                     _titleController.clear();
                     _descriptionController.clear();
@@ -179,12 +180,14 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
   void _toggleTaskStatus(int index) {
     setState(() {
       _tasks[index].toggleStatus();
+      _sortTasksByPriority();
     });
   }
 
   void _deleteTask(int index) {
     setState(() {
       _tasks.removeAt(index);
+      _sortTasksByPriority();
     });
   }
 
