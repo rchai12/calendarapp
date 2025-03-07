@@ -93,6 +93,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     if (_titleController.text.isNotEmpty && _descriptionController.text.isNotEmpty) {
       setState(() {
         _tasks.add(Task(title: _titleController.text, description: _descriptionController.text, priority: _selectedPriority));
+        _sortTasksByPriority();
         _titleController.clear();
         _descriptionController.clear();
         _selectedPriority = PriorityLabel.low;
@@ -101,6 +102,12 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     }
   }
 
+  void _sortTasksByPriority() {
+    setState(() {
+      _tasks.sort((task1, task2) => task2.priority.index.compareTo(task1.priority.index));
+    });
+  }
+  
   void _editTask(int index) {
     _titleController.text = _tasks[index].title;
     _descriptionController.text = _tasks[index].description;
@@ -233,7 +240,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     );
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     final ongoingTasks = _tasks.where((task) => !task.status).toList();
     final completedTasks = _tasks.where((task) => task.status).toList();
@@ -263,6 +270,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                   onPressed: () => _toggleTaskStatus(_tasks.indexOf(task)),
                 ),
                 title: Text(task.title),
+                subtitle: Text('Priority: ${task.priority.label}', style: TextStyle(color: task.priority.color)),
               );
             },
           ),
@@ -277,6 +285,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                   onPressed: () => _toggleTaskStatus(_tasks.indexOf(task)),
                 ),
                 title: Text(task.title, style: TextStyle(decoration: TextDecoration.lineThrough)),
+                subtitle: Text('Priority: ${task.priority.label}', style: TextStyle(color: task.priority.color)),
               );
             },
           ),
