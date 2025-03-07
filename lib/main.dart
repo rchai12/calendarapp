@@ -163,6 +163,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
         _titleController.clear();
         _descriptionController.clear();
         _selectedPriority = PriorityLabel.low;
+        _selectedTaskStatus = TaskStatus.ongoing;
       });
       Navigator.of(context).pop();
     }
@@ -432,7 +433,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                 },
                 calendarBuilders: CalendarBuilders(
                   markerBuilder: (context, date, events) {
-                    goingTasks = _tasksByDate[_date]?.where((task) => task.status != TaskStatus.completed).toList() ?? [];
+                    goingTasks = _tasksByDate[DateTime(date.year, date.month, date.day)]?.where((task) => task.status != TaskStatus.completed).toList() ?? [];
                     if (goingTasks?.isNotEmpty ?? false) {
                       return Positioned(
                         bottom: 1,
@@ -454,12 +455,16 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                     return ListTile(
                       onTap: () => _editTask(task),
                       leading: IconButton(
-                        icon: Icon(task.status != TaskStatus.completed ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                        icon: Icon(task.status != TaskStatus.completed ? Icons.radio_button_unchecked : Icons.radio_button_checked),
                         onPressed: () => _toggleTaskStatus(_date, index),
                       ),
                       title: Text(task.title),
-                      subtitle: Text(
-                        'Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Priority: ${task.priority.label}', style: TextStyle(color: task.priority.color)),
+                          Text('Status: ${task.status.label}\t\tDue: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.status.color)),
+                        ],
                       ),
                     );
                   },
@@ -474,11 +479,17 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
               return ListTile(
                 onTap: () => _editTask(task),
                 leading: IconButton(
-                  icon: Icon(task.status == TaskStatus.ongoing ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                  icon: Icon(task.status == TaskStatus.ongoing ? Icons.radio_button_unchecked : Icons.radio_button_checked),
                   onPressed: () => _toggleTaskStatus(task.date, _tasksByDate[task.date]?.indexOf(task) ?? -1),
                 ),
                 title: Text(task.title),
-                subtitle: Text('Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Priority: ${task.priority.label}', style: TextStyle(color: task.priority.color)),
+                    Text('Status: ${task.status.label}\t\tDue: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.status.color)),
+                  ],
+                ),
               );
             },
           ),
@@ -489,11 +500,17 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
               return ListTile(
                 onTap: () => _editTask(task),
                 leading: IconButton(
-                  icon: Icon(task.status == TaskStatus.pending ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                  icon: Icon(task.status == TaskStatus.pending ? Icons.radio_button_unchecked : Icons.radio_button_checked),
                   onPressed: () => _toggleTaskStatus(task.date, _tasksByDate[task.date]?.indexOf(task) ?? -1),
                 ),
                 title: Text(task.title),
-                subtitle: Text('Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Priority: ${task.priority.label}', style: TextStyle(color: task.priority.color)),
+                    Text('Status: ${task.status.label}\t\tDue: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.status.color)),
+                  ],
+                ),
               );
             },
           ),
@@ -508,7 +525,13 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                   onPressed: () => _toggleTaskStatus(task.date, _tasksByDate[task.date]?.indexOf(task) ?? -1),
                 ),
                 title: Text(task.title, style: TextStyle(decoration: TextDecoration.lineThrough)),
-                subtitle: Text('Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Priority: ${task.priority.label}', style: TextStyle(color: task.priority.color)),
+                    Text('Status: ${task.status.label}\t\tDue: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.status.color)),
+                  ],
+                ),
               );
             },
           ),
