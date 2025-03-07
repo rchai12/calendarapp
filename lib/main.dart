@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 void main() => runApp(TaskManagerApp());
 
@@ -70,18 +71,19 @@ class TaskScreen extends StatefulWidget {
 }
 
 class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateMixin {
-  final List<Task> _tasks = [];
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   PriorityLabel _selectedPriority = PriorityLabel.low;
   DateTime _date = DateTime.now();
   
   late TabController _tabController;
+  late Map<DateTime, List<Task>> _tasksByDate = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _tasksByDate = {}; 
 
 
     _tabController.addListener(() {
@@ -101,7 +103,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _date ?? DateTime.now(), 
-      firstDate: DateTime.now(),
+      firstDate: DateTime(1900),
       lastDate: DateTime(2101),
     );
     if (picked != null && picked != _date) {
@@ -114,27 +116,36 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
   void _addTask() {
     if (_titleController.text.isNotEmpty && _descriptionController.text.isNotEmpty) {
       setState(() {
-        _tasks.add(Task(title: _titleController.text, description: _descriptionController.text, priority: _selectedPriority, date: _date));
-        _sortTasksByPriority();
+        final newTask = Task(
+          title: _titleController.text,
+          description: _descriptionController.text,
+          priority: _selectedPriority,
+          date: _date,
+        );
+        if (!_tasksByDate.containsKey(_date)) {
+          _tasksByDate[_date] = [];
+        }
+        _tasksByDate[_date]?.add(newTask);
+        _sortTasksByPriority(_date);
         _titleController.clear();
         _descriptionController.clear();
         _selectedPriority = PriorityLabel.low;
-        _date = DateTime.now();
       });
       Navigator.of(context).pop();
     }
   }
 
-  void _sortTasksByPriority() {
+  void _sortTasksByPriority(DateTime date) {
     setState(() {
-      _tasks.sort((task1, task2) => task2.priority.index.compareTo(task1.priority.index));
+      _tasksByDate[date]?.sort((task1, task2) => task2.priority.index.compareTo(task1.priority.index));
     });
   }
 
-  void _editTask(int index) {
-    _titleController.text = _tasks[index].title;
-    _descriptionController.text = _tasks[index].description;
-    _selectedPriority = _tasks[index].priority;
+  void _editTask(Task task) {
+    _titleController.text = task.title;
+    _descriptionController.text = task.description;
+    _selectedPriority = task.priority;
+    _date = task.date;
 
     showModalBottomSheet(
       context: context,
@@ -157,8 +168,8 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                   controller: _descriptionController,
                   decoration: InputDecoration(labelText: 'Task Description'),
                 ),
-                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0), 
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: DropdownButtonFormField<PriorityLabel>(
                     value: _selectedPriority,
                     items: PriorityLabel.values.map((PriorityLabel priority) {
@@ -185,10 +196,19 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                 ElevatedButton(
                   onPressed: () {
                     setState(() {
-                      _tasks[index].setTitle(_titleController.text);
-                      _tasks[index].setDescription(_descriptionController.text);
-                      _tasks[index].setPriority(_selectedPriority);
-                      _sortTasksByPriority();
+                      if (_tasksByDate.containsKey(_date)) {
+                        final index = _tasksByDate[_date]?.indexOf(task);
+                        if (index != null && index != -1) {
+                          _tasksByDate[_date]?[index] = Task(
+                            title: _titleController.text,
+                            description: _descriptionController.text,
+                            priority: _selectedPriority,
+                            date: _date,
+                            status: task.status,
+                          );
+                        }
+                      }
+                      _sortTasksByPriority(_date);
                     });
                     _titleController.clear();
                     _descriptionController.clear();
@@ -204,19 +224,30 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     );
   }
 
-  void _toggleTaskStatus(int index) {
+
+  void _toggleTaskStatus(DateTime taskDate, int taskIndex) {
     setState(() {
-      _tasks[index].toggleStatus();
-      _sortTasksByPriority();
+      final taskList = _tasksByDate[taskDate];
+      if (taskList != null && taskIndex >= 0 && taskIndex < taskList.length) {
+        taskList[taskIndex].toggleStatus();
+      }
+      _sortTasksByPriority(taskDate);
     });
   }
 
-  void _deleteTask(int index) {
+  void _deleteTask(DateTime taskDate, int taskIndex) {
     setState(() {
-      _tasks.removeAt(index);
-      _sortTasksByPriority();
+      final taskList = _tasksByDate[taskDate];
+      if (taskList != null && taskIndex >= 0 && taskIndex < taskList.length) {
+        taskList.removeAt(taskIndex);
+        if (taskList.isEmpty) {
+          _tasksByDate.remove(taskDate);
+        }
+      }
+      _sortTasksByPriority(taskDate);
     });
   }
+
 
   void _showAddTaskMenu() {
     showModalBottomSheet(
@@ -274,17 +305,34 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     );
   }
 
+  List<Task> _getTasksByStatus(bool isCompleted) {
+    return _tasksByDate[_date]?.where((task) => task.status == isCompleted).toList() ?? [];
+  }
+
+  void _resetToToday() {
+    setState(() {
+      _date = DateTime.now();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final ongoingTasks = _tasks.where((task) => !task.status).toList();
-    final completedTasks = _tasks.where((task) => task.status).toList();
+    final ongoingTasks = _getTasksByStatus(false);
+    final completedTasks = _getTasksByStatus(true); 
 
     return Scaffold(
       appBar: AppBar(
         title: Text('Task Manager'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.today),
+            onPressed: _resetToToday,
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [
+            Tab(text: 'Calendar'),
             Tab(text: 'Ongoing'),
             Tab(text: 'Completed'),
           ],
@@ -293,15 +341,40 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
       body: TabBarView(
         controller: _tabController,
         children: [
+          TableCalendar(
+            firstDay: DateTime(1900),
+            lastDay: DateTime(2101),
+            focusedDay: _date,
+            selectedDayPredicate: (day) => isSameDay(day, _date),
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _date = selectedDay;
+              });
+            },
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (context, date, events) {
+                if (_tasksByDate[date]?.isNotEmpty ?? false) {
+                  return Positioned(
+                    bottom: 1,
+                    child: CircleAvatar(
+                      radius: 5,
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+                return SizedBox.shrink();
+              },
+            ),
+          ),
           ListView.builder(
             itemCount: ongoingTasks.length,
             itemBuilder: (context, index) {
               final task = ongoingTasks[index];
               return ListTile(
-                onTap: () => _editTask(_tasks.indexOf(task)),
+                onTap: () => _editTask(task),
                 leading: IconButton(
                   icon: Icon(task.status ? Icons.radio_button_checked : Icons.radio_button_unchecked),
-                  onPressed: () => _toggleTaskStatus(_tasks.indexOf(task)),
+                  onPressed: () => _toggleTaskStatus(_date, index),
                 ),
                 title: Text(task.title),
                 subtitle: Text('Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color)),
@@ -313,10 +386,10 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
             itemBuilder: (context, index) {
               final task = completedTasks[index];
               return ListTile(
-                onTap: () => _editTask(_tasks.indexOf(task)),
+                onTap: () => _editTask(task),
                 leading: IconButton(
                   icon: Icon(Icons.check_circle),
-                  onPressed: () => _toggleTaskStatus(_tasks.indexOf(task)),
+                  onPressed: () => _toggleTaskStatus(_date, index),
                 ),
                 title: Text(task.title, style: TextStyle(decoration: TextDecoration.lineThrough)),
                 subtitle: Text('Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color)),
@@ -325,12 +398,11 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
-      floatingActionButton: _tabController.index == 0
-          ? FloatingActionButton(
-              onPressed: _showAddTaskMenu,
-              child: Icon(Icons.add),
-            )
-          : null,
+      floatingActionButton: _tabController.index == 1 || _tabController.index == 0 ? FloatingActionButton(
+        onPressed: _showAddTaskMenu,
+        child: Icon(Icons.add),
+      )
+      : null,
     );
   }
 }
