@@ -38,7 +38,7 @@ class Task {
         _description = description,
         _status = status,
         _priority = priority,
-        _date = date;
+        _date = DateTime(date.year, date.month, date.day);
 
   String get title => _title;
   String get description => _description;
@@ -50,7 +50,7 @@ class Task {
   void setDescription(String description) => _description = description;
   void toggleStatus() => _status = !_status;
   void setPriority(PriorityLabel priority) => _priority = priority;
-  void setDate(DateTime date) => _date = date;
+  void setDate(DateTime date) => _date = DateTime(date.year, date.month, date.day);
 }
 
 
@@ -74,8 +74,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   PriorityLabel _selectedPriority = PriorityLabel.low;
-  DateTime _date = DateTime.now();
-  
+  DateTime _date = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
   late TabController _tabController;
   late Map<DateTime, List<Task>> _tasksByDate = {};
 
@@ -84,7 +83,6 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _tasksByDate = {}; 
-
 
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
@@ -99,16 +97,17 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
+
   void _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _date ?? DateTime.now(), 
-      firstDate: DateTime(1900),
+      initialDate: _date = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
+      firstDate: DateTime(1900, 1, 1),
       lastDate: DateTime(2101),
     );
     if (picked != null && picked != _date) {
       setState(() {
-        _date = picked; 
+        _date = DateTime(picked.year, picked.month, picked.day); 
       });
     }
   }
@@ -120,8 +119,10 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
           title: _titleController.text,
           description: _descriptionController.text,
           priority: _selectedPriority,
-          date: _date,
+          date: DateTime(_date.year, _date.month, _date.day),
         );
+        print('Adding task to list');
+        print(_date);
         if (!_tasksByDate.containsKey(_date)) {
           _tasksByDate[_date] = [];
         }
@@ -230,8 +231,8 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
       final taskList = _tasksByDate[taskDate];
       if (taskList != null && taskIndex >= 0 && taskIndex < taskList.length) {
         taskList[taskIndex].toggleStatus();
+        _sortTasksByPriority(taskDate);
       }
-      _sortTasksByPriority(taskDate);
     });
   }
 
@@ -311,14 +312,23 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
 
   void _resetToToday() {
     setState(() {
-      _date = DateTime.now();
+      _date = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     });
+  }
+
+  List<Task> _getAllTasksByStatus(bool isCompleted) {
+    List<Task> allTasks = [];
+    _tasksByDate.forEach((date, tasks) {
+      allTasks.addAll(tasks.where((task) => task.status == isCompleted));
+    });
+    return allTasks;
   }
 
   @override
   Widget build(BuildContext context) {
-    final ongoingTasks = _getTasksByStatus(false);
-    final completedTasks = _getTasksByStatus(true); 
+    var ongoingTasks = _getTasksByStatus(false);
+    final completedTasks = _getAllTasksByStatus(true);
+    final allOngoingTasks = _getAllTasksByStatus(false); 
 
     return Scaffold(
       appBar: AppBar(
@@ -341,40 +351,65 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
       body: TabBarView(
         controller: _tabController,
         children: [
-          TableCalendar(
-            firstDay: DateTime(1900),
-            lastDay: DateTime(2101),
-            focusedDay: _date,
-            selectedDayPredicate: (day) => isSameDay(day, _date),
-            onDaySelected: (selectedDay, focusedDay) {
-              setState(() {
-                _date = selectedDay;
-              });
-            },
-            calendarBuilders: CalendarBuilders(
-              markerBuilder: (context, date, events) {
-                if (_tasksByDate[date]?.isNotEmpty ?? false) {
-                  return Positioned(
-                    bottom: 1,
-                    child: CircleAvatar(
-                      radius: 5,
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-                return SizedBox.shrink();
-              },
-            ),
+          Column(
+            children: [
+              TableCalendar(
+                firstDay: DateTime(1900, 1, 1),
+                lastDay: DateTime(2101),
+                focusedDay: _date,
+                selectedDayPredicate: (day) => isSameDay(day, _date),
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _date = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);;
+                  });
+                },
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, date, events) {
+                    final localDate = DateTime(date.year, date.month, date.day);
+                    ongoingTasks = _tasksByDate[localDate]?.where((task) => !task.status).toList() ?? [];
+                    if (ongoingTasks?.isNotEmpty ?? false) {
+                      return Positioned(
+                        bottom: 1,
+                        child: CircleAvatar(
+                          radius: 5,
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                    return SizedBox.shrink();
+                  },
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: ongoingTasks.length,
+                  itemBuilder: (context, index) {
+                    final task = ongoingTasks[index];
+                    return ListTile(
+                      onTap: () => _editTask(task),
+                      leading: IconButton(
+                        icon: Icon(task.status ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                        onPressed: () => _toggleTaskStatus(_date, index),
+                      ),
+                      title: Text(task.title),
+                      subtitle: Text(
+                        'Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
           ListView.builder(
-            itemCount: ongoingTasks.length,
+            itemCount: allOngoingTasks.length,
             itemBuilder: (context, index) {
-              final task = ongoingTasks[index];
+              final task = allOngoingTasks[index];
               return ListTile(
                 onTap: () => _editTask(task),
                 leading: IconButton(
                   icon: Icon(task.status ? Icons.radio_button_checked : Icons.radio_button_unchecked),
-                  onPressed: () => _toggleTaskStatus(_date, index),
+                  onPressed: () => _toggleTaskStatus(task.date, _tasksByDate[task.date]?.indexOf(task) ?? -1),
                 ),
                 title: Text(task.title),
                 subtitle: Text('Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color)),
@@ -389,7 +424,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                 onTap: () => _editTask(task),
                 leading: IconButton(
                   icon: Icon(Icons.check_circle),
-                  onPressed: () => _toggleTaskStatus(_date, index),
+                  onPressed: () => _toggleTaskStatus(task.date, _tasksByDate[task.date]?.indexOf(task) ?? -1),
                 ),
                 title: Text(task.title, style: TextStyle(decoration: TextDecoration.lineThrough)),
                 subtitle: Text('Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color)),
