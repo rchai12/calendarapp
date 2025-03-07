@@ -26,14 +26,35 @@ enum PriorityLabel {
   );
 }
 
+enum TaskStatus { 
+  ongoing('Ongoing', Colors.green),
+  pending('Pending', Colors.limeAccent), 
+  completed('Completed', Colors.blueGrey);
+  
+  const TaskStatus(this.label, this.color);
+  final String label;
+  final Color color;
+
+  static final List<DropdownMenuEntry<TaskStatus>> entries = UnmodifiableListView<DropdownMenuEntry<TaskStatus>>(
+    values.map<DropdownMenuEntry<TaskStatus>>(
+      (TaskStatus status) => DropdownMenuEntry<TaskStatus>(
+        value: status,
+        label: status.label,
+        enabled: status.label != 'Grey',
+        style: MenuItemButton.styleFrom(foregroundColor: status.color),
+      ),
+    ),
+  ); 
+}
+
 class Task {
   String _title;
   String _description;
-  bool _status;
+  TaskStatus _status;
   PriorityLabel _priority = PriorityLabel.low;
   DateTime _date;
 
-  Task({required String title, required String description, bool status = false, required PriorityLabel priority, required DateTime date,})  
+  Task({required String title, required String description, TaskStatus status = TaskStatus.ongoing, required PriorityLabel priority, required DateTime date,})  
       : _title = title,
         _description = description,
         _status = status,
@@ -42,14 +63,14 @@ class Task {
 
   String get title => _title;
   String get description => _description;
-  bool get status => _status;
+  TaskStatus get status => _status;
   PriorityLabel get priority => _priority;
   DateTime get date => _date; 
 
   void setTitle(String title) => _title = title;
   void setDescription(String description) => _description = description;
-  void toggleStatus() => _status = !_status;
   void setPriority(PriorityLabel priority) => _priority = priority;
+  void setStatus(TaskStatus status) => _status = status;
   void setDate(DateTime date) => _date = DateTime(date.year, date.month, date.day);
 }
 
@@ -77,11 +98,12 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
   DateTime _date = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
   late TabController _tabController;
   late Map<DateTime, List<Task>> _tasksByDate = {};
+  TaskStatus _selectedTaskStatus = TaskStatus.ongoing;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tasksByDate = {}; 
 
     _tabController.addListener(() {
@@ -97,6 +119,16 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  void _toggleTaskStatus(DateTime taskDate, int taskIndex) {
+    setState(() {
+      final taskList = _tasksByDate[taskDate];
+      if (taskList != null && taskIndex >= 0 && taskIndex < taskList.length) {
+        Task task = taskList[taskIndex];
+        task.setStatus(TaskStatus.values[(task.status.index + 1) % TaskStatus.values.length]);
+        _sortTasksByPriority(taskDate);
+      }
+    });
+  }
 
   void _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -190,6 +222,27 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                     ),
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: DropdownButtonFormField<TaskStatus>(
+                    value: _selectedTaskStatus,
+                    items: TaskStatus.values.map((TaskStatus status) {
+                      return DropdownMenuItem<TaskStatus>(
+                        value: status,
+                        child: Text(status.label, style: TextStyle(color: status.color)),
+                      );
+                    }).toList(),
+                    onChanged: (TaskStatus? newStatus) {
+                      setState(() {
+                        _selectedTaskStatus = newStatus!;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Status',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
                 ElevatedButton(
                   onPressed: () => _selectDate(context),
                   child: Text('Select Date: ${DateFormat('MM-dd-yyyy').format(_date)}'),
@@ -225,16 +278,6 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     );
   }
 
-
-  void _toggleTaskStatus(DateTime taskDate, int taskIndex) {
-    setState(() {
-      final taskList = _tasksByDate[taskDate];
-      if (taskList != null && taskIndex >= 0 && taskIndex < taskList.length) {
-        taskList[taskIndex].toggleStatus();
-        _sortTasksByPriority(taskDate);
-      }
-    });
-  }
 
   void _deleteTask(DateTime taskDate, int taskIndex) {
     setState(() {
@@ -293,6 +336,27 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                     ),
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: DropdownButtonFormField<TaskStatus>(
+                    value: _selectedTaskStatus,
+                    items: TaskStatus.values.map((TaskStatus status) {
+                      return DropdownMenuItem<TaskStatus>(
+                        value: status,
+                        child: Text(status.label, style: TextStyle(color: status.color)),
+                      );
+                    }).toList(),
+                    onChanged: (TaskStatus? newStatus) {
+                      setState(() {
+                        _selectedTaskStatus = newStatus!;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Status',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
                 ElevatedButton(
                   onPressed: () => _selectDate(context),
                   child: Text('Select Date: ${DateFormat('MM-dd-yyyy').format(_date)}'), 
@@ -306,17 +370,13 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     );
   }
 
-  List<Task> _getTasksByStatus(bool isCompleted) {
-    return _tasksByDate[_date]?.where((task) => task.status == isCompleted).toList() ?? [];
-  }
-
   void _resetToToday() {
     setState(() {
       _date = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
     });
   }
 
-  List<Task> _getAllTasksByStatus(bool isCompleted) {
+  List<Task> _getAllTasksByStatus(TaskStatus isCompleted) {
     List<Task> allTasks = [];
     _tasksByDate.forEach((date, tasks) {
       allTasks.addAll(tasks.where((task) => task.status == isCompleted));
@@ -324,11 +384,17 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     return allTasks;
   }
 
+  List<Task> _getAllNotCompletedTasks(TaskStatus isCompleted) {
+    return _tasksByDate[_date]?.where((task) => task.status != isCompleted).toList() ?? [];
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    var ongoingTasks = _getTasksByStatus(false);
-    final completedTasks = _getAllTasksByStatus(true);
-    final allOngoingTasks = _getAllTasksByStatus(false); 
+    var goingTasks = _getAllNotCompletedTasks(TaskStatus.completed);
+    final completedTasks = _getAllTasksByStatus(TaskStatus.completed);
+    final allOngoingTasks = _getAllTasksByStatus(TaskStatus.ongoing); 
+    final allPendingTasks = _getAllTasksByStatus(TaskStatus.pending); 
 
     return Scaffold(
       appBar: AppBar(
@@ -344,6 +410,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
           tabs: [
             Tab(text: 'Calendar'),
             Tab(text: 'Ongoing'),
+            Tab(text: 'Pending'),
             Tab(text: 'Completed'),
           ],
         ),
@@ -365,9 +432,8 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                 },
                 calendarBuilders: CalendarBuilders(
                   markerBuilder: (context, date, events) {
-                    final localDate = DateTime(date.year, date.month, date.day);
-                    ongoingTasks = _tasksByDate[localDate]?.where((task) => !task.status).toList() ?? [];
-                    if (ongoingTasks?.isNotEmpty ?? false) {
+                    goingTasks = _tasksByDate[_date]?.where((task) => task.status != TaskStatus.completed).toList() ?? [];
+                    if (goingTasks?.isNotEmpty ?? false) {
                       return Positioned(
                         bottom: 1,
                         child: CircleAvatar(
@@ -382,13 +448,13 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
               ),
               Expanded(
                 child: ListView.builder(
-                  itemCount: ongoingTasks.length,
+                  itemCount: goingTasks.length,
                   itemBuilder: (context, index) {
-                    final task = ongoingTasks[index];
+                    final task = goingTasks[index];
                     return ListTile(
                       onTap: () => _editTask(task),
                       leading: IconButton(
-                        icon: Icon(task.status ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                        icon: Icon(task.status != TaskStatus.completed ? Icons.radio_button_checked : Icons.radio_button_unchecked),
                         onPressed: () => _toggleTaskStatus(_date, index),
                       ),
                       title: Text(task.title),
@@ -408,7 +474,22 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
               return ListTile(
                 onTap: () => _editTask(task),
                 leading: IconButton(
-                  icon: Icon(task.status ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                  icon: Icon(task.status == TaskStatus.ongoing ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                  onPressed: () => _toggleTaskStatus(task.date, _tasksByDate[task.date]?.indexOf(task) ?? -1),
+                ),
+                title: Text(task.title),
+                subtitle: Text('Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color)),
+              );
+            },
+          ),
+          ListView.builder(
+            itemCount: allPendingTasks.length,
+            itemBuilder: (context, index) {
+              final task = allPendingTasks[index];
+              return ListTile(
+                onTap: () => _editTask(task),
+                leading: IconButton(
+                  icon: Icon(task.status == TaskStatus.pending ? Icons.radio_button_checked : Icons.radio_button_unchecked),
                   onPressed: () => _toggleTaskStatus(task.date, _tasksByDate[task.date]?.indexOf(task) ?? -1),
                 ),
                 title: Text(task.title),
