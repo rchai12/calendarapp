@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
+import 'package:intl/intl.dart';
 
 void main() => runApp(TaskManagerApp());
 
@@ -28,24 +29,30 @@ class Task {
   String _title;
   String _description;
   bool _status;
-  PriorityLabel _priority;
+  PriorityLabel _priority = PriorityLabel.low;
+  DateTime _date;
 
-  Task({required String title, required String description, bool status = false, required PriorityLabel priority})
+  Task({required String title, required String description, bool status = false, required PriorityLabel priority, required DateTime date,})  
       : _title = title,
         _description = description,
         _status = status,
-        _priority = priority;
+        _priority = priority,
+        _date = date;
 
   String get title => _title;
   String get description => _description;
   bool get status => _status;
   PriorityLabel get priority => _priority;
+  DateTime get date => _date; 
 
   void setTitle(String title) => _title = title;
   void setDescription(String description) => _description = description;
   void toggleStatus() => _status = !_status;
   void setPriority(PriorityLabel priority) => _priority = priority;
+  void setDate(DateTime date) => _date = date;
 }
+
+
 
 class TaskManagerApp extends StatelessWidget {
   @override
@@ -67,6 +74,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   PriorityLabel _selectedPriority = PriorityLabel.low;
+  DateTime _date = DateTime.now();
   
   late TabController _tabController;
 
@@ -89,14 +97,29 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  void _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _date ?? DateTime.now(), 
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != _date) {
+      setState(() {
+        _date = picked; 
+      });
+    }
+  }
+
   void _addTask() {
     if (_titleController.text.isNotEmpty && _descriptionController.text.isNotEmpty) {
       setState(() {
-        _tasks.add(Task(title: _titleController.text, description: _descriptionController.text, priority: _selectedPriority));
+        _tasks.add(Task(title: _titleController.text, description: _descriptionController.text, priority: _selectedPriority, date: _date));
         _sortTasksByPriority();
         _titleController.clear();
         _descriptionController.clear();
         _selectedPriority = PriorityLabel.low;
+        _date = DateTime.now();
       });
       Navigator.of(context).pop();
     }
@@ -154,6 +177,10 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                       border: OutlineInputBorder(),
                     ),
                   ),
+                ),
+                ElevatedButton(
+                  onPressed: () => _selectDate(context),
+                  child: Text('Select Date: ${DateFormat('MM-dd-yyyy').format(_date)}'),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -234,6 +261,10 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                     ),
                   ),
                 ),
+                ElevatedButton(
+                  onPressed: () => _selectDate(context),
+                  child: Text('Select Date: ${DateFormat('MM-dd-yyyy').format(_date)}'), 
+                ),
                 ElevatedButton(onPressed: _addTask, child: Text('Add Task')),
               ],
             ),
@@ -273,7 +304,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                   onPressed: () => _toggleTaskStatus(_tasks.indexOf(task)),
                 ),
                 title: Text(task.title),
-                subtitle: Text('Priority: ${task.priority.label}', style: TextStyle(color: task.priority.color)),
+                subtitle: Text('Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color)),
               );
             },
           ),
@@ -288,7 +319,7 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
                   onPressed: () => _toggleTaskStatus(_tasks.indexOf(task)),
                 ),
                 title: Text(task.title, style: TextStyle(decoration: TextDecoration.lineThrough)),
-                subtitle: Text('Priority: ${task.priority.label}', style: TextStyle(color: task.priority.color)),
+                subtitle: Text('Priority: ${task.priority.label}\t\t Due: ${DateFormat('MM-dd-yyyy').format(task.date)}', style: TextStyle(color: task.priority.color)),
               );
             },
           ),
