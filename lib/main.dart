@@ -1,0 +1,293 @@
+import 'package:flutter/material.dart';
+import 'package:collection/collection.dart';
+
+void main() => runApp(TaskManagerApp());
+
+enum PriorityLabel {
+  low('Low', Colors.blue),
+  medium('Medium', Colors.orange),
+  high('High', Colors.pink);
+
+  const PriorityLabel(this.label, this.color);
+  final String label;
+  final Color color;
+
+  static final List<DropdownMenuEntry<PriorityLabel>> entries = UnmodifiableListView<DropdownMenuEntry<PriorityLabel>>(
+    values.map<DropdownMenuEntry<PriorityLabel>>(
+      (PriorityLabel priority) => DropdownMenuEntry<PriorityLabel>(
+        value: priority,
+        label: priority.label,
+        enabled: priority.label != 'Grey',
+        style: MenuItemButton.styleFrom(foregroundColor: priority.color),
+      ),
+    ),
+  );
+}
+
+class Task {
+  String _title;
+  String _description;
+  bool _status;
+  PriorityLabel _priority;
+
+  Task({required String title, required String description, bool status = false, required PriorityLabel priority})
+      : _title = title,
+        _description = description,
+        _status = status,
+        _priority = priority;
+
+  String get title => _title;
+  String get description => _description;
+  bool get status => _status;
+  PriorityLabel get priority => _priority;
+
+  void setTitle(String title) => _title = title;
+  void setDescription(String description) => _description = description;
+  void toggleStatus() => _status = !_status;
+  void setPriority(PriorityLabel priority) => _priority = priority;
+}
+
+class TaskManagerApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData.dark(),
+      home: TaskScreen(),
+    );
+  }
+}
+
+class TaskScreen extends StatefulWidget {
+  @override
+  _TaskScreenState createState() => _TaskScreenState();
+}
+
+class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateMixin {
+  final List<Task> _tasks = [];
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  PriorityLabel _selectedPriority = PriorityLabel.low;
+  
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+
+
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _addTask() {
+    if (_titleController.text.isNotEmpty && _descriptionController.text.isNotEmpty) {
+      setState(() {
+        _tasks.add(Task(title: _titleController.text, description: _descriptionController.text, priority: _selectedPriority));
+        _titleController.clear();
+        _descriptionController.clear();
+        _selectedPriority = PriorityLabel.low;
+      });
+      Navigator.of(context).pop();
+    }
+  }
+
+  void _editTask(int index) {
+    _titleController.text = _tasks[index].title;
+    _descriptionController.text = _tasks[index].description;
+    _selectedPriority = _tasks[index].priority;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 50,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _titleController,
+                  decoration: InputDecoration(labelText: 'Task Title'),
+                ),
+                TextField(
+                  controller: _descriptionController,
+                  decoration: InputDecoration(labelText: 'Task Description'),
+                ),
+                 Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0), 
+                  child: DropdownButtonFormField<PriorityLabel>(
+                    value: _selectedPriority,
+                    items: PriorityLabel.values.map((PriorityLabel priority) {
+                      return DropdownMenuItem<PriorityLabel>(
+                        value: priority,
+                        child: Text(priority.label, style: TextStyle(color: priority.color)),
+                      );
+                    }).toList(),
+                    onChanged: (PriorityLabel? newValue) {
+                      setState(() {
+                        _selectedPriority = newValue!;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Priority',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _tasks[index].setTitle(_titleController.text);
+                      _tasks[index].setDescription(_descriptionController.text);
+                      _tasks[index].setPriority(_selectedPriority);
+                    });
+                    _titleController.clear();
+                    _descriptionController.clear();
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Save Changes'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _toggleTaskStatus(int index) {
+    setState(() {
+      _tasks[index].toggleStatus();
+    });
+  }
+
+  void _deleteTask(int index) {
+    setState(() {
+      _tasks.removeAt(index);
+    });
+  }
+
+  void _showAddTaskMenu() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 50, 
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _titleController,
+                  decoration: InputDecoration(labelText: 'Task Title'),
+                ),
+                TextField(
+                  controller: _descriptionController,
+                  decoration: InputDecoration(labelText: 'Task Description'),
+                ),
+                 Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0), 
+                  child: DropdownButtonFormField<PriorityLabel>(
+                    value: _selectedPriority,
+                    items: PriorityLabel.values.map((PriorityLabel priority) {
+                      return DropdownMenuItem<PriorityLabel>(
+                        value: priority,
+                        child: Text(priority.label, style: TextStyle(color: priority.color)),
+                      );
+                    }).toList(),
+                    onChanged: (PriorityLabel? newValue) {
+                      setState(() {
+                        _selectedPriority = newValue!;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Priority',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                ElevatedButton(onPressed: _addTask, child: Text('Add Task')),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+@override
+  Widget build(BuildContext context) {
+    final ongoingTasks = _tasks.where((task) => !task.status).toList();
+    final completedTasks = _tasks.where((task) => task.status).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Task Manager'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(text: 'Ongoing'),
+            Tab(text: 'Completed'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          ListView.builder(
+            itemCount: ongoingTasks.length,
+            itemBuilder: (context, index) {
+              final task = ongoingTasks[index];
+              return ListTile(
+                onTap: () => _editTask(_tasks.indexOf(task)),
+                leading: IconButton(
+                  icon: Icon(task.status ? Icons.radio_button_checked : Icons.radio_button_unchecked),
+                  onPressed: () => _toggleTaskStatus(_tasks.indexOf(task)),
+                ),
+                title: Text(task.title),
+              );
+            },
+          ),
+          ListView.builder(
+            itemCount: completedTasks.length,
+            itemBuilder: (context, index) {
+              final task = completedTasks[index];
+              return ListTile(
+                onTap: () => _editTask(_tasks.indexOf(task)),
+                leading: IconButton(
+                  icon: Icon(Icons.check_circle),
+                  onPressed: () => _toggleTaskStatus(_tasks.indexOf(task)),
+                ),
+                title: Text(task.title, style: TextStyle(decoration: TextDecoration.lineThrough)),
+              );
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton(
+              onPressed: _showAddTaskMenu,
+              child: Icon(Icons.add),
+            )
+          : null,
+    );
+  }
+}
