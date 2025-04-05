@@ -98,7 +98,11 @@ class TaskActions {
                 date: selectedDate,
                 userId: userId,
               );
-              final docRef = await FirebaseFirestore.instance.collection('tasks').add(task.toMap());
+              final docRef = await FirebaseFirestore.instance
+                .collection('users')
+                .doc(userId)
+                .collection('tasks')
+                .add(task.toMap());
               task.id = docRef.id;
               onAdd(task);
               Navigator.pop(ctx);
@@ -193,8 +197,9 @@ class TaskActions {
 
   static Future<List<Task>> loadTasksFromFirestore(String userId) async {
     final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId) 
         .collection('tasks')
-        .where('userId', isEqualTo: userId)
         .get();
 
     return snapshot.docs.map((doc) {
@@ -213,7 +218,11 @@ class TaskActions {
 
 
   static Future<void> updateTaskInFirestore(Task task) async {
-    final docRef = FirebaseFirestore.instance.collection('tasks').doc(task.id);
+    final docRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(task.userId)
+        .collection('tasks') 
+        .doc(task.id);
     await docRef.update(task.toMap());
   }
 
