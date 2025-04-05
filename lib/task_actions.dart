@@ -14,15 +14,21 @@ class TaskActions {
   }
 
   static Future<void> deleteTask(List<Task> tasks, Task task) async {
-    try {
-      if (task.id != null) {
-        await FirebaseFirestore.instance.collection('tasks').doc(task.id).delete();
-      }
-      tasks.remove(task);
-    } catch (e) {
-      print('Error deleting task: $e');
+  try {
+    if (task.id != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(task.userId) 
+          .collection('tasks') 
+          .doc(task.id)  
+          .delete();
     }
+    tasks.remove(task);
+  } catch (e) {
+    print('Error deleting task: $e');
   }
+}
+
 
   static void updateTask(Task oldTask, Task newTask, List<Task> taskList) {
     final index = taskList.indexOf(oldTask);
