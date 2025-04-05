@@ -8,8 +8,14 @@ import 'task.dart';
 import 'status.dart';
 import 'task_actions.dart';
 //import 'package:intl/intl.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() => runApp(TaskManagerApp());
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(TaskManagerApp());
+}
 
 class TaskManagerApp extends StatelessWidget {
   @override
@@ -38,7 +44,13 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(_tabChanged);
-    _buildTaskMap();
+    _tasksByDate = {};
+    TaskActions.loadTasksFromFirestore().then((loadedTasks) {
+      setState(() {
+        _tasks.addAll(loadedTasks);
+        _buildTaskMap();
+      });
+    });
   }
 
   void _onDateSelected(DateTime newDate) {

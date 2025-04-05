@@ -3,15 +3,25 @@ import 'status.dart';
 import 'priority.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TaskActions {
-  static void toggleStatus(Task task) {
+
+  static void toggleStatus(Task task) async {
     final nextIndex = (task.status.index + 1) % TaskStatus.values.length;
     task.setStatus(TaskStatus.values[nextIndex]);
+    await updateTaskInFirestore(task);
   }
 
-  static void deleteTask(List<Task> tasks, Task task) {
-    tasks.remove(task);
+  static Future<void> deleteTask(List<Task> tasks, Task task) async {
+    try {
+      if (task.id != null) {
+        await FirebaseFirestore.instance.collection('tasks').doc(task.id).delete();
+      }
+      tasks.remove(task);
+    } catch (e) {
+      print('Error deleting task: $e');
+    }
   }
 
   static void updateTask(Task oldTask, Task newTask, List<Task> taskList) {
@@ -79,7 +89,7 @@ class TaskActions {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final task = Task(
                 title: titleController.text,
                 description: descController.text,
@@ -87,6 +97,8 @@ class TaskActions {
                 priority: selectedPriority,
                 date: selectedDate,
               );
+              final docRef = await FirebaseFirestore.instance.collection('tasks').add(task.toMap());
+              task.id = docRef.id;
               onAdd(task);
               Navigator.pop(ctx);
             },
@@ -157,59 +169,44 @@ class TaskActions {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
-              final updatedTask = Task(
-                title: titleController.text,
-                description: descController.text,
-                status: selectedStatus,
-                priority: selectedPriority,
-                date: selectedDate,
-              );
-              onEdit(updatedTask);
-              Navigator.pop(ctx);
-            },
+            onPressed: () async {
+            final updatedTask = Task(
+              id: task.id,
+              title: titleController.text,
+              description: descController.text,
+              status: selectedStatus,
+              priority: selectedPriority,
+              date: selectedDate,
+            );
+            onEdit(updatedTask);
+            await updateTaskInFirestore(updatedTask);
+            Navigator.pop(ctx);
+          },
             child: Text('Save'),
           ),
         ],
       ),
     );
   }
+
+  static Future<List<Task>> loadTasksFromFirestore() async {
+    final snapshot = await FirebaseFirestore.instance.collection('tasks').get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return Task(
+        id: doc.id,
+        title: data['title'],
+        description: data['description'],
+        status: TaskStatus.values.firstWhere((e) => e.name == data['status']),
+        priority: PriorityLabel.values.firstWhere((e) => e.name == data['priority']),
+        date: DateTime.parse(data['date']),
+      );
+    }).toList();
+  }
+
+  static Future<void> updateTaskInFirestore(Task task) async {
+    final docRef = FirebaseFirestore.instance.collection('tasks').doc(task.id);
+    await docRef.update(task.toMap());
+  }
+
 }
-  /*static void addTask(Map<DateTime, List<Task>> tasksByDate, Task task) {
-    final date = task.date;
-    if (!tasksByDate.containsKey(date)) {
-      tasksByDate[date] = [];
-    }
-    tasksByDate[date]?.add(task);
-    _sortTasksByPriority(tasksByDate, date);
-  }
-
-  static void deleteTask(Map<DateTime, List<Task>> tasksByDate, DateTime date, int index) {
-    final taskList = tasksByDate[date];
-    if (taskList != null && index >= 0 && index < taskList.length) {
-      taskList.removeAt(index);
-      if (taskList.isEmpty) {
-        tasksByDate.remove(date);
-      }
-    }
-  }
-
-  static void editTask(Map<DateTime, List<Task>> tasksByDate, DateTime date, int index, Task updatedTask) {
-    if (tasksByDate.containsKey(date)) {
-      tasksByDate[date]?[index] = updatedTask;
-      _sortTasksByPriority(tasksByDate, date);
-    }
-  }
-
-  static void toggleStatus(Map<DateTime, List<Task>> tasksByDate, DateTime date, int index) {
-    final taskList = tasksByDate[date];
-    if (taskList != null && index >= 0 && index < taskList.length) {
-      final task = taskList[index];
-      task.setStatus(TaskStatus.values[(task.status.index + 1) % TaskStatus.values.length]);
-      _sortTasksByPriority(tasksByDate, date);
-    }
-  }
-
-  static void _sortTasksByPriority(Map<DateTime, List<Task>> tasksByDate, DateTime date) {
-    tasksByDate[date]?.sort((a, b) => b.priority.index.compareTo(a.priority.index));
-  }*/
