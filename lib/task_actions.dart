@@ -29,7 +29,7 @@ class TaskActions {
     if (index != -1) taskList[index] = newTask;
   }
 
-  static Future<void> showAddTaskDialog(BuildContext context, Function(Task) onAdd, DateTime initialDate, TaskStatus defaultStatus) async {
+  static Future<void> showAddTaskDialog(BuildContext context, Function(Task) onAdd, DateTime initialDate, TaskStatus defaultStatus, String userId) async {
     final titleController = TextEditingController();
     final descController = TextEditingController();
     TaskStatus selectedStatus = defaultStatus;
@@ -96,6 +96,7 @@ class TaskActions {
                 status: selectedStatus,
                 priority: selectedPriority,
                 date: selectedDate,
+                userId: userId,
               );
               final docRef = await FirebaseFirestore.instance.collection('tasks').add(task.toMap());
               task.id = docRef.id;
@@ -177,6 +178,7 @@ class TaskActions {
               status: selectedStatus,
               priority: selectedPriority,
               date: selectedDate,
+              userId: task.userId,
             );
             onEdit(updatedTask);
             await updateTaskInFirestore(updatedTask);
@@ -189,8 +191,12 @@ class TaskActions {
     );
   }
 
-  static Future<List<Task>> loadTasksFromFirestore() async {
-    final snapshot = await FirebaseFirestore.instance.collection('tasks').get();
+  static Future<List<Task>> loadTasksFromFirestore(String userId) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('tasks')
+        .where('userId', isEqualTo: userId)
+        .get();
+
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return Task(
@@ -200,9 +206,11 @@ class TaskActions {
         status: TaskStatus.values.firstWhere((e) => e.name == data['status']),
         priority: PriorityLabel.values.firstWhere((e) => e.name == data['priority']),
         date: DateTime.parse(data['date']),
+        userId: data['userId'],
       );
     }).toList();
   }
+
 
   static Future<void> updateTaskInFirestore(Task task) async {
     final docRef = FirebaseFirestore.instance.collection('tasks').doc(task.id);

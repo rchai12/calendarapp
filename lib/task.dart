@@ -8,6 +8,7 @@ class Task {
   TaskStatus _status;
   PriorityLabel _priority = PriorityLabel.low;
   DateTime _date;
+  String _userId;
 
   Task({
     this.id,
@@ -16,17 +17,20 @@ class Task {
     TaskStatus status = TaskStatus.ongoing,
     required PriorityLabel priority,
     required DateTime date,
+    required userId,
   })  : _title = title,
         _description = description,
         _status = status,
         _priority = priority,
-        _date = date;
+        _date = date,
+        _userId = userId;
 
   String get title => _title;
   String get description => _description;
   TaskStatus get status => _status;
   PriorityLabel get priority => _priority;
   DateTime get date => _date;
+  String get userId => _userId;
 
   void setTitle(String title) => _title = title;
   void setDescription(String description) => _description = description;
@@ -41,6 +45,7 @@ class Task {
       'status': _status.name,
       'priority': _priority.name,
       'date': _date.toIso8601String(),
+      'userId': _userId,
     };
   }
 
@@ -52,6 +57,7 @@ class Task {
       status: TaskStatus.values.firstWhere((e) => e.name == map['status']),
       priority: PriorityLabel.values.firstWhere((e) => e.name == map['priority']),
       date: DateTime.parse(map['date']),
+      userId: map['userId'],
     );
   }
 }

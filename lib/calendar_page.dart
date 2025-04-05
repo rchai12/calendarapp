@@ -12,6 +12,7 @@ class CalendarPage extends StatefulWidget {
   final void Function(Task) onEditTask;
   final void Function(Task) onToggleStatus;
   final void Function(Task) onDeleteTask;
+  final String userId;
 
   const CalendarPage({
     required this.selectedDate,
@@ -21,6 +22,7 @@ class CalendarPage extends StatefulWidget {
     required this.onEditTask,
     required this.onToggleStatus,
     required this.onDeleteTask,
+    required this.userId,
     super.key,
   });
 
@@ -75,6 +77,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 onEditTask: widget.onEditTask,
                 onToggleStatus: widget.onToggleStatus,
                 onDeleteTask: widget.onDeleteTask,
+                userId: widget.userId,
               );
             },
           ),

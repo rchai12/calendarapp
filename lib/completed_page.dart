@@ -8,12 +8,14 @@ class CompletedPage extends StatelessWidget {
   final void Function(Task) onEditTask;
   final void Function(Task) onToggleStatus;
   final void Function(Task) onDeleteTask;
+  final String userId;
 
   const CompletedPage({
     required this.tasks,
     required this.onEditTask,
     required this.onToggleStatus,
     required this.onDeleteTask,
+    required this.userId,
     super.key
   });
 
@@ -29,6 +31,7 @@ class CompletedPage extends StatelessWidget {
           onEditTask: onEditTask,
           onToggleStatus: onToggleStatus,
           onDeleteTask: onDeleteTask,
+          userId: userId,
         ),
     );
   }

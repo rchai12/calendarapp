@@ -8,6 +8,7 @@ class TaskTile extends StatelessWidget {
   final void Function(Task) onEditTask;
   final void Function(Task) onToggleStatus;
   final void Function(Task) onDeleteTask;
+  final String userId;
 
   const TaskTile({
     required this.task, 
@@ -15,6 +16,7 @@ class TaskTile extends StatelessWidget {
     required this.onEditTask,
     required this.onToggleStatus,
     required this.onDeleteTask,
+    required this.userId,
     super.key
   });
 
