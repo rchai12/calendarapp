@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-//import 'package:intl/intl.dart';
 import 'task.dart';
 import 'status.dart';
-//import 'task_actions.dart';
 import 'task_tile.dart';
 
 class CalendarPage extends StatefulWidget {
@@ -13,7 +11,7 @@ class CalendarPage extends StatefulWidget {
   final Map<DateTime, List<Task>> tasksByDate;
   final void Function(Task) onEditTask;
   final void Function(Task) onToggleStatus;
-
+  final void Function(Task) onDeleteTask;
 
   const CalendarPage({
     required this.selectedDate,
@@ -22,6 +20,7 @@ class CalendarPage extends StatefulWidget {
     required this.tasksByDate,
     required this.onEditTask,
     required this.onToggleStatus,
+    required this.onDeleteTask,
     super.key,
   });
 
@@ -75,6 +74,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 task: task,
                 onEditTask: widget.onEditTask,
                 onToggleStatus: widget.onToggleStatus,
+                onDeleteTask: widget.onDeleteTask,
               );
             },
           ),

@@ -4,10 +4,8 @@ import 'ongoing_page.dart';
 import 'pending_page.dart';
 import 'completed_page.dart';
 import 'task.dart';
-//import 'priority.dart';
 import 'status.dart';
 import 'task_actions.dart';
-//import 'package:intl/intl.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 
@@ -104,6 +102,13 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
     });
   }
 
+  void _deleteTask(Task task) async {
+    await TaskActions.deleteTask(_tasks, task);
+    setState(() {
+      _buildTaskMap();
+    });
+  }
+
   void _toggleTaskStatus(Task task) {
     setState(() {
       TaskActions.toggleStatus(task); 
@@ -136,21 +141,25 @@ class _TaskScreenState extends State<TaskScreen> with SingleTickerProviderStateM
             tasksByDate: _tasksByDate,
             onEditTask: _editTask,
             onToggleStatus: _toggleTaskStatus,
+            onDeleteTask: _deleteTask,
           ),
           OngoingPage(
             tasks: _tasks,
             onEditTask: _editTask,
             onToggleStatus: _toggleTaskStatus,
+            onDeleteTask: _deleteTask,
           ),
           PendingPage(
             tasks: _tasks, 
             onEditTask: _editTask,
             onToggleStatus: _toggleTaskStatus,
+            onDeleteTask: _deleteTask,
           ),
           CompletedPage(
             tasks: _tasks, 
             onEditTask: _editTask,
             onToggleStatus: _toggleTaskStatus,
+            onDeleteTask: _deleteTask,
           ),
         ],
       ),

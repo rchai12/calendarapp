@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'task.dart';
 import 'status.dart';
-//import 'task_actions.dart';
 import 'task_tile.dart';
 
 class PendingPage extends StatelessWidget {
   final List<Task> tasks;
   final void Function(Task) onEditTask;
   final void Function(Task) onToggleStatus;
+  final void Function(Task) onDeleteTask;
 
   const PendingPage({
     required this.tasks, 
     required this.onEditTask,
     required this.onToggleStatus,
+    required this.onDeleteTask,
     super.key
   });
 
@@ -26,6 +27,7 @@ class PendingPage extends StatelessWidget {
         task: pendingTasks[index],
         onEditTask: onEditTask,
         onToggleStatus: onToggleStatus,
+        onDeleteTask: onDeleteTask,
       ),
     );
   }

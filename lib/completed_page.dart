@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'task.dart';
 import 'status.dart';
-//import 'task_actions.dart';
 import 'task_tile.dart';
 
 class CompletedPage extends StatelessWidget {
   final List<Task> tasks;
   final void Function(Task) onEditTask;
   final void Function(Task) onToggleStatus;
+  final void Function(Task) onDeleteTask;
 
   const CompletedPage({
     required this.tasks,
     required this.onEditTask,
     required this.onToggleStatus,
+    required this.onDeleteTask,
     super.key
   });
 
@@ -27,6 +28,7 @@ class CompletedPage extends StatelessWidget {
           isCompleted: true,
           onEditTask: onEditTask,
           onToggleStatus: onToggleStatus,
+          onDeleteTask: onDeleteTask,
         ),
     );
   }
